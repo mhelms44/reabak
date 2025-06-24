@@ -29,7 +29,7 @@ elseif (Test-Path -Path 'F:\Reaper Project Backup Staging\*')
 #Get-Date >> "C:\Users\Michael\reabakERROR.txt"
 #"Starting Reaper project backup transfer. Here is a list of files up for transfer:" >> "C:\Users\Michael\reabakERROR.txt"
 #Get-ChildItem -Path "F:\Reaper Project Backup Staging\" -Filter *.rpp-bak -r | Format-List -Property ('Name') >> "C:\Users\Michael\reabakERROR.txt"
-robocopy 'F:\Reaper Project Backup Staging\ ' 'B:\Reaper Backup Archives\ ' /MOV /log:"C:\Users\Michael\reabak.txt"
+robocopy 'F:\Reaper Project Backup Staging\ ' 'B:\Reaper Backup Archives\ ' /MOV /XX /NP /log:"C:\Users\Michael\reabak.txt"
 }
 
 # Generic catch all. I can't imagine this would ever actually evaluate as true.
