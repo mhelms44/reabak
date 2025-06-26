@@ -21,8 +21,8 @@ $LogFile = "$env:USERPROFILE\reabak.log"
 # Validate the path to the backup files exists and has files. If false
 # the script will stop here. 
 if (!(Test-Path -Path $SourceDir)) {
-    Get-Date >> "C:\Users\Michael\reabak.txt"
-    "$SourceDir does not exist, nothing to do. Exit code 0" >> "C:\Users\Michael\reabak.txt"
+    Get-Date >> "C:\Users\Michael\reabak.log"
+    "$SourceDir does not exist, nothing to do. Exit code 0" >> "C:\Users\Michael\reabak.log"
     exit 0
 }
 
@@ -30,13 +30,13 @@ if (!(Test-Path -Path $SourceDir)) {
 # Will move all files in the directory. 
 elseif (Test-Path -Path 'F:\Reaper Project Backup Staging\*') {
     # Commenting out this part for debug use. In future would be nice to set with a flag 
-    #Get-Date >> "C:\Users\Michael\reabakERROR.txt"
-    #"Starting Reaper project backup transfer. Here is a list of files up for transfer:" >> "C:\Users\Michael\reabakERROR.txt"
-    #Get-ChildItem -Path "F:\Reaper Project Backup Staging\" -Filter *.rpp-bak -r | Format-List -Property ('Name') >> "C:\Users\Michael\reabakERROR.txt"
-    robocopy 'F:\Reaper Project Backup Staging\ ' 'B:\Reaper Backup Archives\ ' /MOV /XX /NP /log:"C:\Users\Michael\reabak.txt"
+    #Get-Date >> "C:\Users\Michael\reabakERROR.log"
+    #"Starting Reaper project backup transfer. Here is a list of files up for transfer:" >> "C:\Users\Michael\reabakERROR.log"
+    #Get-ChildItem -Path "F:\Reaper Project Backup Staging\" -Filter *.rpp-bak -r | Format-List -Property ('Name') >> "C:\Users\Michael\reabakERROR.log"
+    robocopy 'F:\Reaper Project Backup Staging\ ' 'B:\Reaper Backup Archives\ ' /MOV /XX /NP /log:"C:\Users\Michael\reabak.log"
 }
 
 # Generic catch all. I can't imagine this would ever actually evaluate as true.
 else {
-    "Something went wrong, sorry." >> "C:\Users\Michael\reabak.txt"
+    "Something went wrong, sorry." >> "C:\Users\Michael\reabak.log"
 }
