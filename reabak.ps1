@@ -1,42 +1,68 @@
 # Checks preconfigured directory for any RPP backup files. If files exist the
 # script calls robocopy to move all files in the directory to a long term
 # archival directory to free up space on production disk/volume
-# Some basic sanity checks are done to make sure files are present 
-# Very crude logging for both the files + robocopy output.
-<#
-    TODO
-    Change all the hard coded paths, etc. to variables
-    Need to make robocopy only target the right file type
-    Would be nice to have better logging in place
-    Also need logic to auto rotate file list log after X size/number of days
-    Robocopy should overwrite the log but the other conditions will not
-    For now everything seems to work okay
-#>
 
 # Config
 $SourceDir = "F:\Reaper Project Backup Staging"
 $DestDir = "B:\Reaper Backup Archives"
 $LogFile = "$env:USERPROFILE\reabak.log"
+$RppBakMinAge = 3   # How old in days a file is before archive
+$PruneBackups = $false
+$PruneAgeDays = 365
 
-# Validate the path to the backup files exists and has files. If false
-# the script will stop here. 
+function Log($msg) {
+    "$(Get-Date -Format 's') – $msg" >> $LogFile
+}
+# Validate the path to the backup files exists
 if (!(Test-Path -Path $SourceDir)) {
-    Get-Date >> "C:\Users\Michael\reabak.log"
-    "$SourceDir does not exist, nothing to do. Exit code 0" >> "C:\Users\Michael\reabak.log"
+    Log "WARN $SourceDir does not exist, nothing to do. Exit code 0" 
     exit 0
 }
 
-# All the good stuff happens here. If files are detected in the path robocopy 
-# Will move all files in the directory. 
-elseif (Test-Path -Path 'F:\Reaper Project Backup Staging\*') {
-    # Commenting out this part for debug use. In future would be nice to set with a flag 
-    #Get-Date >> "C:\Users\Michael\reabakERROR.log"
-    #"Starting Reaper project backup transfer. Here is a list of files up for transfer:" >> "C:\Users\Michael\reabakERROR.log"
-    #Get-ChildItem -Path "F:\Reaper Project Backup Staging\" -Filter *.rpp-bak -r | Format-List -Property ('Name') >> "C:\Users\Michael\reabakERROR.log"
-    robocopy 'F:\Reaper Project Backup Staging\ ' 'B:\Reaper Backup Archives\ ' /MOV /XX /NP /log:"C:\Users\Michael\reabak.log"
+# Validate if Reaper project backup files exist
+$files = Get-ChildItem $SourceDir -Filter '*.rpp-bak' -File
+if (!$files) {
+    Log "WARN no rpp-bak files found. Exit code 0"
+    exit 0
 }
 
-# Generic catch all. I can't imagine this would ever actually evaluate as true.
-else {
-    "Something went wrong, sorry." >> "C:\Users\Michael\reabak.log"
+# Invoke robocopy
+Log "INFO starting robocopy"
+robocopy "$SourceDir" "$DestDir" /MOV /MINAGE:$RppBakMinAge /XX /NP /log:"$LogFile"
+
+# Remove rpp-bak files on the destination older than 365 days
+# Optional function, does not delete anything by default
+if ($PruneBackups) {
+    Log "INFO Backup Pruning enabled"
+    $FilesToPrune = Get-ChildItem $DestDir -Filter '*.rpp-bak' -File |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$PruneAgeDays) }
+    if (!$FilesToPrune) {
+        Log "INFO No .rpp-bak files older than $PruneAgeDays days"
+    }
+    else {
+        Log "INFO $($FilesToPrune.Count) backups older than $PruneAgeDays days marked for removal"
+        $FilesToPrune | ForEach-Object {
+            Log "INFO Would Delete: $($_.FullName)"
+        }
+        Log "INFO Starting file removal"
+        $FilesToPrune | ForEach-Object {
+            $PrunePath = $_.FullName
+            try {
+                Remove-Item $PrunePath -ErrorAction Stop -WhatIf
+                Log "INFO Deleted: $PrunePath"
+            }
+            catch {
+                Log "FAIL Unable to delete $PrunePath - $($_.Exception.Message)"
+            } 
+        }
+    }
+
 }
+
+# Catch errors from robocopy
+if ($LASTEXITCODE -gt 3) {
+    Log "FATAL robocopy error detected $LASTEXITCODE"
+    exit 1
+}
+
+exit 0
