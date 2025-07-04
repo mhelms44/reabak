@@ -2,6 +2,7 @@
 # script calls robocopy to move all files in the directory to a long term
 # archival directory to free up space on production disk/volume
 
+$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 # Config
 $SourceDir = "F:\Reaper Project Backup Staging"
 $DestDir = "B:\Reaper Backup Archives"
@@ -11,7 +12,7 @@ $PruneBackups = $false
 $PruneAgeDays = 365
 
 function Log($msg) {
-    "$(Get-Date -Format 's') – $msg" >> $LogFile
+    "$(Get-Date -Format 's') $msg" >> $LogFile
 }
 # Validate the path to the backup files exists
 if (!(Test-Path -Path $SourceDir)) {
@@ -21,18 +22,24 @@ if (!(Test-Path -Path $SourceDir)) {
 
 # Validate if Reaper project backup files exist
 $files = Get-ChildItem $SourceDir -Filter '*.rpp-bak' -File
-if (!$files) {
+if ($files -eq $false) {
     Log "WARN no rpp-bak files found. Exit code 0"
     exit 0
 }
 
+$files = Get-ChildItem $SourceDir -Filter '*.rpp-bak' -File |
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$RppBakMinAge) }
+if ($files.length -eq 0) {
+    Log "INFO no files older than $RppBakMinAge days - nothing to do. Exit code 0"
+    exit 0
+}
+
 # Invoke robocopy
-Log "INFO starting robocopy"
 robocopy "$SourceDir" "$DestDir" /MOV /MINAGE:$RppBakMinAge /XX /NP /log:"$LogFile"
 
 # Remove rpp-bak files on the destination older than 365 days
 # Optional function, does not delete anything by default
-if ($PruneBackups) {
+if ($PruneBackups -eq $true) {
     Log "INFO Backup Pruning enabled"
     $FilesToPrune = Get-ChildItem $DestDir -Filter '*.rpp-bak' -File |
     Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-$PruneAgeDays) }
